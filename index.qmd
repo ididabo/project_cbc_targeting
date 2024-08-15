@@ -1,0 +1,174 @@
+---
+title: "Targeting Projetc CBC"
+author: 
+  Idrissa DABO/ RAM officer
+title-block-banner: "#D7DBDD"
+date-modified: "08/15/2024 04:00"
+date-format: "MM/D/YYYY, HH:mm"
+lang: fr
+language: 
+  title-block-author-single: "RAM CO Cameroun"
+  title-block-modified: "Dernière Mise à Jour"
+format: 
+  html:
+    self-contained: true
+    toc: true
+    toc-location: right
+editor: visual
+---
+
+```{r echo=FALSE}
+  htmltools::img(src = knitr::image_uri(file.path("image/WFP-logo.png")), 
+               alt = 'logo', 
+               style = 'position:absolute; top:5px; right:15px; padding:10px; max-width: 13%; max-height: 13%')
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(haven)
+library(labelled)
+library(echarts4r)
+library(r2resize)
+library(gtsummary)
+library(xlsx)
+# library(gtsummary)
+library(writexl)
+library(DT)
+
+data_cbc <- read_sav("dataset_projet_cbc.sav")
+data_cbc <- data_cbc |> to_factor()
+
+by_enum <- data_cbc |> group_by(EnuName) |> count()
+by_enum <- by_enum |> mutate(
+  quota = n/25
+)
+
+enq1 <- data.frame(val = c(by_enum$quota[1],0.5,0.4))
+enq1_graph <- enq1 |> e_charts() |> e_liquid(val) |> e_title(by_enum$EnuName[1],left = "center", top = 2,                           textStyle = list(fontSize = 15))|> 
+  e_toolbox_feature("saveAsImage")
+
+enq2 <- data.frame(val = c(by_enum$quota[2],0.5,0.4))
+enq2_graph <- enq2 |> e_charts() |> e_liquid(val) |> e_title(by_enum$EnuName[2],left = "center", top = 2,                           textStyle = list(fontSize = 15))|> 
+  e_toolbox_feature("saveAsImage")
+
+enq3 <- data.frame(val = c(by_enum$quota[3],0.5,0.4))
+enq3_graph <- enq3 |> e_charts() |> e_liquid(val) |> e_title(by_enum$EnuName[3],left = "center", top = 2,                           textStyle = list(fontSize = 15))|> 
+  e_toolbox_feature("saveAsImage")
+
+enq4 <- data.frame(val = c(by_enum$quota[4],0.5,0.4))
+enq4_graph <- enq4 |> e_charts() |> e_liquid(val) |> e_title(by_enum$EnuName[4],left = "center", top = 2,                           textStyle = list(fontSize = 15))|> 
+  e_toolbox_feature("saveAsImage") 
+
+# data_collected <- data_cbc |> select(EnuName) |> tbl_summary()
+
+data_cbc <- data_cbc %>% mutate(
+  FCS = (2*FCSStap) + (3 * FCSPulse) + (4 * FCSDairy) + (4 * FCSPr) + (FCSVeg) +
+    (0.5 * FCSFat) + (0.5 * FCSSugar) + FCSFruit
+) %>% mutate( FCSCat28 =
+                case_when(
+                  FCS >= 0 &  FCS <= 28 ~ "Poor",
+                  FCS > 28 & FCS <= 42 ~ "Borderline",
+                  FCS > 42 ~ "Acceptable"
+                ),
+              FCSCat21 =
+                case_when(
+                  FCS >= 0 &  FCS <= 21 ~ "Poor",
+                  FCS > 21 & FCS <= 35 ~ "Borderline",
+                  FCS > 35 ~ "Acceptable"
+                )
+)
+
+fcsenq <- read.csv("cari_region2.csv")
+
+fcsenq <- fcsenq |> rename(
+  Acceptable = "Acceptable..N...91",
+  Borderline = "Borderline..N...221",
+  Poor = "Poor..N...191"
+)
+
+fcsenq <- fcsenq[-c(1,6),]
+
+fcsenq_graph <- fcsenq |> e_charts(Characteristic) |> 
+  e_bar(Acceptable,stack = "grp",color = "#27AE60") |> 
+  e_bar(Borderline,stack = "grp", color = "#F1C40F") |> 
+  e_bar(Poor,stack = "grp", color = "#C0392B") |> 
+  e_labels(position = "insideRight", 
+           formatter = htmlwidgets::JS("
+      function(params){
+        return(params.value[1] + '%')
+      }
+    ") ) |> e_x_axis(axisLabel = list(interval = 0, rotate = 25)) |> e_toolbox_feature("saveAsImage")
+
+
+# tableau
+tab_Mahamat <- data_cbc |> filter(
+  EnuName == "MAHAMAT ALIFA"
+) |> select(RESPName, RESPLastName,EnuName,FCSStap,FCSVeg,FCSPulse,FCSDairy,
+            FCSPr,FCSFat,FCSSugar,FCSFruit,FCS)
+
+
+tab_Marylise <- data_cbc |> filter(
+  EnuName == "MENGUE MARLYSE"
+) |> select(RESPName, RESPLastName,EnuName,FCSStap,FCSVeg,FCSPulse,FCSDairy,
+            FCSPr,FCSFat,FCSSugar,FCSFruit,FCS)
+
+statu_logement <-  data_cbc |> filter(
+  HHTenureType == "Propriétaire"
+) |> select(RESPName, RESPLastName,EnuName,HHTenureType,FCSCat21)
+
+
+```
+
+## Avancement de l'enquête
+
+### Donnés collectés
+
+50 ménages ont été enquêtés le premier jour, avec 49 répondantes de sexe féminin et 1 répondant de sexe masculin. Parmi ces ménages, 72 % sont dirigés par des femmes (soit 34 ménages), contre 28 % dirigés par des hommes. Tous les ménages enquêtés ont le statut de déplacés internes (IDPs). Cependant, il est important de noter que plus de 50 % (27) de ces ménages déclarent être propriétaires de leur logement. Il faudra donc prêter attention à leur lieu d’habitation pour vérifier la cohérence entre leur statut de déplacés internes et le type de logement dont ils sont propriétaires.
+
+```{r  echo=FALSE}
+data_cbc |> select(EnuName) |> tbl_summary()
+```
+
+### Quota par enquêteurs
+
+Concernant les quotas fixés de 25 questionnaires par enquêteur, nous avons atteint 60 % pour LIPWE WAIROU, 56 % pour NDASDEGAI CATHERINE, 44 % pour MAHAMAT ALIFA, et 40 % pour MENGUE MARLYSE.
+
+```{r echo=FALSE}
+#| layout-ncol: 4
+#| layout: [[30,-10, 30], [-10], [30,-10, 30]]
+enq1_graph
+enq2_graph
+enq3_graph
+enq4_graph
+```
+
+## Résultats FCS
+
+### Score de consommation Alimentaire par enquêteur
+En ce qui concerne l'indicateur du score de consommation alimentaire, aucun des ménages enquêtés par MAHAMAT ALIFA n'a obtenu un score de consommation alimentaire acceptable. Au cours des 7 derniers jours, aucun des ménages qu'il a enquêtés n'a consommé d'aliments riches en protéines, en produits laitiers ou en légumineuses.
+
+À l'inverse, aucun des ménages enquêtés par MENGUE MARLYSE n'a un score de consommation alimentaire faible. Il serait donc utile d'examiner cette différence, surtout si les ménages se trouvent dans le même village et que l'on suppose qu'ils ont des habitudes alimentaires similaires.
+
+
+```{r echo=FALSE}
+fcsenq_graph
+```
+
+### Tableau détail FCS Mahamat
+```{r echo=FALSE}
+datatable(tab_Mahamat)
+```
+
+### Tableau détail FCS Marlyse
+
+```{r echo=FALSE}
+datatable(tab_Marylise)
+```
+
+### Tableau Ménage IDPs propriétaire de logement
+
+```{r echo=FALSE}
+datatable(statu_logement)
+```
+
